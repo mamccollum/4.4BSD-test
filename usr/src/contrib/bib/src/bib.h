@@ -1,7 +1,13 @@
 /*
- *	@(#)bib.h	2.8	5/27/93
+ *	bib.h	
  */
 /*   various arguments for bib and listrefs processors */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <unistd.h>
 
 /* constants */
 
@@ -49,8 +55,6 @@ char BMACLIB[100], COMFILE[100], DEFSTYLE[100];
 	/* maximum number of characters in common file */
 # define MAXCOMM 1000
 
-char *malloc();
-
 /* fix needed for systems where open [w]+ doesn't work */
 # ifdef READWRITE
 
@@ -77,8 +81,8 @@ char *malloc();
 	bool	wi_expanding;	/* is it being expanded? */
 	struct wordinfo *wi_hp;	/* hash chain */
    };
-   int	strhash();
+
+int	strhash(const char *str);
 #define HASHSIZE	509
 
 #define reg register
-

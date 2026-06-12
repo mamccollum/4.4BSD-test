@@ -1,12 +1,11 @@
-#ifndef lint
-static char sccsid[] = "@(#)alpha.seek.c	2.3	5/27/93";
-#endif not lint
-#
+/*
+ * alpha.seek.c
+ */
 
-# include "stdio.h"
-# include "ctype.h"
-# include "streams.h"
-# define  nexttry           ((high+low)/2)
+#include "stdio.h"
+#include "ctype.h"
+#include "streams.h"
+#define  nexttry           ((high+low)/2)
 
 /*  alpha_seek(stream, word, s_size, fold)
         seeks the first line in stream that is at least word.
@@ -15,12 +14,10 @@ static char sccsid[] = "@(#)alpha.seek.c	2.3	5/27/93";
     s_size = size of stream
     returns 1 if word = line, 0 o.w.
 */
-int alpha_seek(stream, word, s_size, fold)
-FILE *stream;
-char *word;
-long int s_size;
-int  fold;
-{   long int high, low, mid;    /*  point to beginning of a line in stream  */
+int 
+alpha_seek(FILE *stream, char *word, long int s_size, int fold)
+{
+    long int high, low, mid;    /*  point to beginning of a line in stream  */
     int      ans;               /*  line(low) < word <= line(high)          */
     char     line[maxstr];
 
@@ -67,9 +64,11 @@ int  fold;
 
 /*  foldline(p):    change all uppercase to lowercase in string p
 */
-foldline(p)
-char *p;
-{   for (; *p!=NULL;  p++)
+int
+foldline(char *p)
+{
+    for (; *p!='\0';  p++)
     {   if (isupper(*p))    *p = tolower(*p);
     }
+    return 0;
 }

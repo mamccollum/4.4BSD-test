@@ -1,12 +1,13 @@
-#ifndef lint
-static char sccsid[] = "@(#)streams.c	2.5	5/27/93";
-#endif not lint
-#
+/*
+ * streams.c
+ */
 
-# include "stdio.h"
-# include "streams.h"
-# include "ctype.h"
-# include "bib.h"
+#include "stdio.h"
+#include "streams.h"
+#include "ctype.h"
+#include "bib.h"
+#include "string.h"
+#include "stdlib.h"
 
 
 /*  getword(stream,p,ignore):
@@ -17,11 +18,10 @@ static char sccsid[] = "@(#)streams.c	2.5	5/27/93";
     all words of the form %a are returned as null.
     *p is a null terminated string (char p[maxstr]).
 */
-getword(stream,p,ignore,bolp)
-FILE *stream;
-char *p, *ignore;
-int *bolp;
-{   int c; /* will always contain the last character seen */
+void
+getword(FILE *stream, char *p, char *ignore, int *bolp)
+{
+    int c; /* will always contain the last character seen */
     char *oldp, *stop;
     long save;
     int newbolp;
@@ -36,7 +36,7 @@ int *bolp;
         if (p < stop)  p++;
         c= getc(stream);
     }
-    *p= NULL;
+    *p= '\0';
 
     /* if line begins with %, then if following char is one to cause the
      * line to be ignored, then skip to \n.  If the following line is
@@ -49,7 +49,7 @@ int *bolp;
      */
    if (*bolp) {
       if (*oldp == '%') {
-	 *oldp = NULL;
+	 *oldp = '\0';
 	 if (index(ignore, oldp[1]) != NULL) {   
 	    do { 
 	       while (c != '\n') c=getc(stream);
@@ -71,10 +71,10 @@ int *bolp;
     (record ends at blank line or eof)
     assumes and retains stream positioned at start
 */
-long int recsize(stream,start)
-FILE *stream;
-long int start;
-{   char c;                 /*  length = # of chars from start to beginning */
+long int
+recsize(FILE *stream, long int start)
+{
+    char c;                 /*  length = # of chars from start to beginning */
     long int length;        /*  of current line.  c in current line.        */
     int nonspaces;          /*  nonspaces = # of nonspaces in current line. */
 
@@ -103,10 +103,10 @@ long int start;
     returns position in stream.  (returns EOF, if seeks to EOF)
     skips comment lines (those beginning with '#')
 */
-long int nextrecord(stream,x)
-FILE *stream;
-long int x;
-{   long int start;         /*  position of the beginning of the line  */
+long int
+nextrecord(FILE *stream, long int x)
+{
+    long int start;         /*  position of the beginning of the line  */
     char c;                 /*      containing c                       */
 
     pos(x);
@@ -133,10 +133,10 @@ long int x;
         x is the index of a character in the file (not eof).
     returns position in stream
 */
-long int nextline(stream,x)
-FILE *stream;
-long int x;
-{   pos(x);
+long int
+nextline(FILE *stream, long int x)
+{
+    pos(x);
     while (getc(stream)!='\n') ;
     return(ftell(stream));
 }
@@ -144,9 +144,10 @@ long int x;
 
 /*  printline(stream): copies stream up to a newline
 */
-printline(stream)
-FILE *stream;
-{   char c;
+void
+printline(FILE *stream)
+{
+    char c;
     while ((c=getc(stream)) != '\n' && c!=EOF)  putchar(c);
     putchar('\n');
 }
@@ -155,19 +156,19 @@ FILE *stream;
         advance stream past \n.
     limit of  maxstr-1 chars may be stored at p.
 */
-getline(stream,p)
-FILE *stream;
-char *p;
-{   char *stop;
+void
+getline(FILE *stream, char *p)
+{
+    char *stop;
     stop= p+maxstr-1;
     while ( (*p= getc(stream)) != '\n' && *p!=EOF)
         if (p<stop)    p++;
-    *p= NULL;
+    *p= '\0';
 }
 
 /* replace string old at the head of subj by new */
-strreplace(subj, old, new)
-	char *subj, *old, *new;
+void
+strreplace(char *subj, char *old, char *new)
 {
 	char buf[128];
 	int lg;
