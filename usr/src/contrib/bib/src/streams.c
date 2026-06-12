@@ -1,16 +1,16 @@
 /*
- * streams.c
+ * streams.c - Stream processing functions
  */
 
-#include "stdio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h>
 #include "streams.h"
-#include "ctype.h"
 #include "bib.h"
-#include "string.h"
-#include "stdlib.h"
 
-
-/*  getword(stream,p,ignore):
+/*  getword(stream,p,ignore,bolp):
         read next sequence of nonspaces on current line into *p.
     null if no more words on current line.
     %x (x in ignore) terminates line and any following non-blank lines that
@@ -23,20 +23,20 @@ getword(FILE *stream, char *p, char *ignore, int *bolp)
 {
     int c; /* will always contain the last character seen */
     char *oldp, *stop;
-    long save;
-    int newbolp;
 
-    oldp= p;
-    stop= p+maxstr-1;
-    do{ c= getc(stream);
-    }   while (isspace(c) && c!='\n');
+    oldp = p;
+    stop = p + maxstr - 1;
+    do {
+        c = getc(stream);
+    } while (isspace(c) && c != '\n');
 
-    while (!isspace(c))
-    {   *p= c;
-        if (p < stop)  p++;
-        c= getc(stream);
+    while (!isspace(c)) {
+        *p = c;
+        if (p < stop)
+            p++;
+        c = getc(stream);
     }
-    *p= '\0';
+    *p = '\0';
 
     /* if line begins with %, then if following char is one to cause the
      * line to be ignored, then skip to \n.  If the following line is
@@ -47,24 +47,23 @@ getword(FILE *stream, char *p, char *ignore, int *bolp)
      * modified to ignore %x words, but they do not delete lines unless
      * they occur at the beginning of lines.  -ads
      */
-   if (*bolp) {
-      if (*oldp == '%') {
-	 *oldp = '\0';
-	 if (index(ignore, oldp[1]) != NULL) {   
-	    do { 
-	       while (c != '\n') c=getc(stream);
-	       c= getc(stream);
-	       }   while (c != EOF && !isspace(c) && c != '%');
-	    ungetc(c, stream);
-	    *bolp = true;
-	    }
-	 else *bolp = false;
-	 }
-      }
-   else *bolp = (c == '\n' || c == EOF);
+    if (*bolp) {
+        if (*oldp == '%') {
+            *oldp = '\0';
+            if (index(ignore, oldp[1]) != NULL) {
+                do {
+                    while (c != '\n')
+                        c = getc(stream);
+                    c = getc(stream);
+                } while (c != EOF && !isspace(c) && c != '%');
+                ungetc(c, stream);
+                *bolp = 1;
+            } else
+                *bolp = 0;
+        }
+    } else
+        *bolp = (c == '\n' || c == EOF);
 }
-
-
 
 /*  recsize(stream,start):
     returns length of record beginning at start
@@ -74,28 +73,27 @@ getword(FILE *stream, char *p, char *ignore, int *bolp)
 long int
 recsize(FILE *stream, long int start)
 {
-    char c;                 /*  length = # of chars from start to beginning */
-    long int length;        /*  of current line.  c in current line.        */
-    int nonspaces;          /*  nonspaces = # of nonspaces in current line. */
+    char c;          /* length = # of chars from start to beginning */
+    long int length; /* of current line.  c in current line.        */
+    int nonspaces;   /* nonspaces = # of nonspaces in current line. */
 
-    nonspaces= 0;
-    c= getc(stream);
-    length= 0L;
+    nonspaces = 0;
+    c = getc(stream);
+    length = 0L;
 
-    while ((c != '\n' || nonspaces != 0) && c != EOF) {   
-      if (c == '\n') {   
-	 length= ftell(stream)-start;
-         nonspaces= 0;
-	 }
-      else if (!isspace(c)) nonspaces++;
+    while ((c != '\n' || nonspaces != 0) && c != EOF) {
+        if (c == '\n') {
+            length = ftell(stream) - start;
+            nonspaces = 0;
+        } else if (!isspace(c))
+            nonspaces++;
 
-      c= getc(stream);
-      }
+        c = getc(stream);
+    }
 
     pos(start);
-    return(length);
+    return (length);
 }
-
 
 /*  nextrecord(stream,x): seeks in stream for first non-blank line
         at or after char x in stream. seeks to eof if x is past last record.
@@ -106,26 +104,33 @@ recsize(FILE *stream, long int start)
 long int
 nextrecord(FILE *stream, long int x)
 {
-    long int start;         /*  position of the beginning of the line  */
-    char c;                 /*      containing c                       */
+    long int start; /* position of the beginning of the line  */
+    char c;         /* containing c                           */
 
     pos(x);
-    start= x;
-    /*  find start of first non-blank record        */
-        c= getc(stream);
-        for(;;)
-        {   if (c == '\n') { start= ftell(stream); c= getc(stream); }
-	    else if (c == '#') {
-	       /* skip any comment lines */
-	       while (c != '\n') c=getc(stream);
-	       }
-            else if (isspace(c)) c= getc(stream);
-	    else                 break;
-        }
+    start = x;
+    /* find start of first non-blank record */
+    c = getc(stream);
+    for (;;) {
+        if (c == '\n') {
+            start = ftell(stream);
+            c = getc(stream);
+        } else if (c == '#') {
+            /* skip any comment lines */
+            while (c != '\n')
+                c = getc(stream);
+        } else if (isspace(c))
+            c = getc(stream);
+        else
+            break;
+    }
 
-    if (feof(stream))   { pos(start);  start= EOF;  }
-    else                pos(start);
-    return(start);
+    if (feof(stream)) {
+        pos(start);
+        start = EOF;
+    } else
+        pos(start);
+    return (start);
 }
 
 /*  nextline(stream,x): seeks in stream after first newline at or after
@@ -137,10 +142,10 @@ long int
 nextline(FILE *stream, long int x)
 {
     pos(x);
-    while (getc(stream)!='\n') ;
-    return(ftell(stream));
+    while (getc(stream) != '\n')
+        ;
+    return (ftell(stream));
 }
-
 
 /*  printline(stream): copies stream up to a newline
 */
@@ -148,7 +153,8 @@ void
 printline(FILE *stream)
 {
     char c;
-    while ((c=getc(stream)) != '\n' && c!=EOF)  putchar(c);
+    while ((c = getc(stream)) != '\n' && c != EOF)
+        putchar(c);
     putchar('\n');
 }
 
@@ -160,19 +166,20 @@ void
 getline(FILE *stream, char *p)
 {
     char *stop;
-    stop= p+maxstr-1;
-    while ( (*p= getc(stream)) != '\n' && *p!=EOF)
-        if (p<stop)    p++;
-    *p= '\0';
+    stop = p + maxstr - 1;
+    while ((*p = getc(stream)) != '\n' && *p != EOF)
+        if (p < stop)
+            p++;
+    *p = '\0';
 }
 
 /* replace string old at the head of subj by new */
 void
 strreplace(char *subj, char *old, char *new)
 {
-	char buf[128];
-	int lg;
-	strcpy(buf, &subj[strlen(old)]);
-	strcpy(subj, new);
-	strcat(subj, buf);
+    char buf[128];
+    int lg;
+    strcpy(buf, &subj[strlen(old)]);
+    strcpy(subj, new);
+    strcat(subj, buf);
 }
