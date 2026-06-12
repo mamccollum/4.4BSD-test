@@ -1,10 +1,15 @@
 #	@(#)Makefile	2.8	6/7/93
 #
-# 
-CFLAGS = -DBASEDIR=\"$(DEST_BASE)\" -DINCORE -fwritable-strings
-CC = cc $(CFLAGS)
+# Modernized for ANSI C and contemporary Unix systems
+# Requires: gcc or clang with POSIX extensions
+#
+
+CC = cc
+CFLAGS = -DBASEDIR=\"$(DEST_BASE)\" -DINCORE -Wall -Wextra -std=c99
+LDFLAGS =
+
 .c.o:
-	$(CC) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 INVo        = invert.o streams.o  makekey.o
 INVc        = invert.c streams.c  makekey.c
@@ -18,54 +23,53 @@ BIBINCo	    = bibinc.o
 BIBINCc     = bibinc.c
 
 SRCS = \
-	adsdebug.h \
+	streams.h \
+	bib.h \
 	bib.c \
 	bibargs.c \
 	bibinc.c \
-	comments.h \
 	alpha.seek.c \
-	bib.h \
 	invert.c \
 	listrefs.c \
 	locate.c \
 	lookup.c \
 	makekey.c \
 	streams.c \
-	streams.h
+	bib2tib
 
 all:	invert lookup listrefs bib bibinc
 
 install: all
-	install -s -c bib $(DEST_BIN)/bib
-	install -s -c invert $(DEST_BIN)/invert
-	install -s -c lookup $(DEST_BIN)/lookup
-	install -s -c listrefs $(DEST_BIN)/listrefs
-	install -s -c bibinc $(DEST_BIN)/bibinc
-	install -c bib2tib $(DEST_BIN)/bib2tib
+	install -s -m 755 bib $(DEST_BIN)/bib
+	install -s -m 755 invert $(DEST_BIN)/invert
+	install -s -m 755 lookup $(DEST_BIN)/lookup
+	install -s -m 755 listrefs $(DEST_BIN)/listrefs
+	install -s -m 755 bibinc $(DEST_BIN)/bibinc
+	install -m 755 bib2tib $(DEST_BIN)/bib2tib
 
 invert:  $(INVo)
-	$(CC)   $(INVo)   -o invert
+	$(CC) $(CFLAGS) $(LDFLAGS) $(INVo) -o invert
 
 invert.lint:  $(INVc) bib.h streams.h
-	lint  $(INVc) >invert.lint
+	lint  $(INVc)
 
 lookup: $(LOOKo)
-	$(CC)   $(LOOKo)  -o lookup
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LOOKo) -o lookup
 
 lookup.lint: $(LOOKc) bib.h streams.h
-	lint $(LOOKc) >lookup.lint
+	lint $(LOOKc)
 
-bibinc: $(BIBINCc) adsdebug.h comments.h streams.h
-	$(CC)   $(BIBINCc)  -o bibinc
+bibinc: $(BIBINCc) streams.h
+	$(CC) $(CFLAGS) $(LDFLAGS) $(BIBINCc) -o bibinc
 
 bib: $(BIBo)
-	$(CC)   $(BIBo)  -o bib
+	$(CC) $(CFLAGS) $(LDFLAGS) $(BIBo) -o bib
 
 bib.lint: $(BIBc) bib.h streams.h
-	lint $(BIBc) >bib.lint
+	lint $(BIBc)
 
 listrefs: $(LISTo)
-	$(CC)   $(LISTo)  -o listrefs
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LISTo) -o listrefs
 
 bib.o:		bib.h
 bibargs.o:	bib.h
@@ -76,9 +80,15 @@ locate.o:       streams.h bib.h
 makekey.o:	bib.h
 alpha.seek.o:   streams.h
 streams.o:      streams.h bib.h
+bibinc.o:	streams.h
 
 $(SRCS) :
 	sccs get $@
 
 clean:	
 	-rm -f *.o bib invert listrefs lookup tags bibinc
+
+depend:
+	$(CC) -MM $(CFLAGS) $(BIBc) $(INVc) $(LOOKc) $(LISTc) $(BIBINCc) > .depend
+
+-include .depend
