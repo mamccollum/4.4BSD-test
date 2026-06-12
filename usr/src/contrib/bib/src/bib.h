@@ -8,6 +8,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <ctype.h>
 
 /* constants */
 
@@ -83,6 +84,28 @@ char BMACLIB[100], COMFILE[100], DEFSTYLE[100];
    };
 
 int	strhash(const char *str);
+void	rdref(struct refinfo *p, char ref[]);
+void	wrref(struct refinfo *p, char ref[]);
+void	dumpref(int i, FILE *ofd);
+void	bldcite(char *cp, int i, char ref[]);
+void	expand(char *line);
+void	cleanup(int val);
+void	error(char *str, ...);
+void	bibwarning(char *msg, ...);
+void	rdtext(FILE *fd);
+void	rdcite(FILE *fd, char ch);
+void	makecites(void);
+void	disambiguate(void);
+void	pass2(FILE *ifd, FILE *ofd);
+void	incfile(char *np);
+void	wordstuff(char *word, char *def);
+void	wordrestuff(char *word, char *def);
+struct wordinfo *wordsearch(char *word);
+char	*walloc(char *word);
+char	*hunt(char huntstr[]);
+int	getref(char huntstr[]);
+struct refinfo *refssearch(char *rf);
+
 #define HASHSIZE	509
 
 #define reg register
