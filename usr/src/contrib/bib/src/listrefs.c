@@ -1,36 +1,24 @@
-#ifndef lint
-static char sccsid[] = "@(#)listrefs.c	2.7	1/3/94";
-#endif not lint
 /*
-        Listrefs - list references for bib system
+ * listrefs.c - List references for bib system
+ */
 
-        Authored by: Tim Budd, University of Arizona, 1983.
-                lookup routines written by gary levin 2/82
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <unistd.h>
+#include "bib.h"
+#include "streams.h"
 
-                version 7/4/83
-
-        Various modifications suggested by:
-                David Cherveny - Duke University Medical Center
-                Phil Garrison - UC Berkeley
-                M. J. Hawley - Yale University
-
-
-
-
-                                                        */
-# include <stdio.h>
-# include <ctype.h>
-# include "bib.h"
-# include "streams.h"
-# define MAXLIST 2000  /* maximum number of references that can be listed */
-# define getch(c,fd) (c = getc(fd))
+#define MAXLIST 2000  /* maximum number of references that can be listed */
+#define getch(c, fd) (c = getc(fd))
 
 FILE *tfd;
 
 #ifndef INCORE
 FILE *rfd;                      /* reference file position */
 char reffile[] = TMPREFFILE;    /* temporary file (see bib.h) */
-#endif INCORE
+#endif
 struct refinfo refinfo[MAXLIST];      /* references temporary file, seek positions */
 struct refinfo *refshash[HASHSIZE];
 long int rend = 1;              /* last used position in reference file */
@@ -40,113 +28,124 @@ extern char bibfname[];
 extern int biblineno;
 char *programName;
 
-#include <signal.h>
-main(argc, argv)
-   int argc;
-   char **argv;
-{  char defult[120];
-   int  i, rcomp();
-   void intr();
+int rcomp(const void *ap, const void *bp);
+void intr(void);
 
-   InitDirectory(BMACLIB,N_BMACLIB);
-   InitDirectory(COMFILE,N_COMFILE);
-   InitDirectory(DEFSTYLE,N_DEFSTYLE);
+int
+main(int argc, char **argv)
+{
+    char defult[120];
+    int i;
 
-   signal(SIGINT, intr);
-   programName = argv[0];
-   tfd = stdout;
-   strcpy(defult, BMACLIB);
-   strcat(defult,"/bib.list");
+    InitDirectory(BMACLIB, N_BMACLIB);
+    InitDirectory(COMFILE, N_COMFILE);
+    InitDirectory(DEFSTYLE, N_DEFSTYLE);
+
+    signal(SIGINT, (void (*)(int))intr);
+    programName = argv[0];
+    tfd = stdout;
+    strcpy(defult, BMACLIB);
+    strcat(defult, "/bib.list");
 #ifndef INCORE
-   mktemp(reffile);
-   rfd = fopen(reffile,"w+");
-   if (rfd == NULL)
-      error("can't open temporary reference file");
-   putc('x', rfd);      /* put garbage in first position */
-#endif not INCORE
+    mktemp(reffile);
+    rfd = fopen(reffile, "w+");
+    if (rfd == NULL)
+        error("can't open temporary reference file");
+    putc('x', rfd);      /* put garbage in first position */
+#endif
 
-   doargs(argc, argv, defult);
+    doargs(argc, argv, defult);
 
-   if (sort)
-      qsort(refinfo, numrefs, sizeof(struct refinfo), rcomp);
-   makecites();
-   disambiguate();
+    if (sort)
+        qsort(refinfo, numrefs, sizeof(struct refinfo), rcomp);
+    makecites();
+    disambiguate();
 
-   for (i = 0; i < numrefs; i++)
-      dumpref(i, stdout);
+    for (i = 0; i < numrefs; i++)
+        dumpref(i, stdout);
 
-   cleanup(0);
+    cleanup(0);
+    return 0;
 }
+
 void
-intr()
+intr(void)
 {
-  cleanup(1);
+    cleanup(1);
 }
-cleanup(val)
+
+void
+cleanup(int val)
 {
 #ifndef INCORE
-  fclose(rfd);
-  unlink(reffile);
-#endif not INCORE
-  exit(val);
+    fclose(rfd);
+    unlink(reffile);
+#endif
+    exit(val);
 }
 
 /* rdtext - process a file */
-   rdtext(ifile)
-   FILE *ifile;
-{  int c;
-   char *p, rec[REFSIZE];
-   int i;
-   int hash, lg;
+void
+rdtext(FILE *ifile)
+{
+    int c;
+    char *p, rec[REFSIZE];
+    int i;
+    int hash, lg;
 
-   biblineno = 1;
-   for (;;) {
-      getch(c, ifile);
-      for (;;) {
-	 /* skip leading newlines and comments */
-	 if (c == '\n') getch(c, ifile);
-	 else if (c == '#') while (getch(c, ifile) != '\n' && c != EOF) ;
-	 else break;
-         biblineno++;   
-	 }
-      if (c == EOF)
-         return;
-
-      p = rec;          /* read a reference */
-      for (;;) {
-         for (*p++ = c; getch(c, ifile) != '\n'; )
-            if (c == EOF)
-               error("ill formed reference file");
+    biblineno = 1;
+    for (;;) {
+        getch(c, ifile);
+        for (;;) {
+            /* skip leading newlines and comments */
+            if (c == '\n')
+                getch(c, ifile);
+            else if (c == '#')
+                while (getch(c, ifile) != '\n' && c != EOF)
+                    ;
             else
-               *p++ = c;
-	 /* at end-of-line */
-	 while (getch(c, ifile) == '#') 
-	    while (getch(c, ifile) != '\n' && c != EOF) ;
-         if (c == '\n' || c == EOF) { /* if empty or eof */
+                break;
             biblineno++;
-            *p++ = '\n';
-            break;
+        }
+        if (c == EOF)
+            return;
+
+        p = rec;          /* read a reference */
+        for (;;) {
+            for (*p++ = c; getch(c, ifile) != '\n';)
+                if (c == EOF)
+                    error("ill formed reference file");
+                else
+                    *p++ = c;
+            /* at end-of-line */
+            while (getch(c, ifile) == '#')
+                while (getch(c, ifile) != '\n' && c != EOF)
+                    ;
+            if (c == '\n' || c == EOF) { /* if empty or eof */
+                biblineno++;
+                *p++ = '\n';
+                break;
             }
-         if (c == '.' || c == '%')
-            *p++ = '\n';
-         else
-            *p++ = ' ';
-         }
+            if (c == '.' || c == '%')
+                *p++ = '\n';
+            else
+                *p++ = ' ';
+        }
 
-      *p = 0;
-      expand(rec);
+        *p = 0;
+        expand(rec);
 
-      /* didn't match any existing reference, create new one */
-      if (numrefs >= MAXLIST)
-	error("too many references, max of %d", MAXLIST);
-      hash = strhash(rec);
-      lg = strlen(rec) + 1;
-      refinfo[numrefs].ri_pos = rend;
-      refinfo[numrefs].ri_length = lg;
-      refinfo[numrefs].ri_hp = refshash[hash];
-      refinfo[numrefs].ri_n = numrefs;
-      refshash[hash] = &refinfo[numrefs];
-      wrref(&refinfo[numrefs], rec);
-      numrefs++;
-      }
+        /* didn't match any existing reference, create new one */
+        if (numrefs >= MAXLIST)
+            error("too many references, max of %d", MAXLIST);
+        hash = strhash(rec);
+        lg = strlen(rec) + 1;
+        refinfo[numrefs].ri_pos = rend;
+        refinfo[numrefs].ri_length = lg;
+        refinfo[numrefs].ri_hp = refshash[hash];
+        refinfo[numrefs].ri_n = numrefs;
+        refshash[hash] = &refinfo[numrefs];
+        wrref(&refinfo[numrefs], rec);
+        numrefs++;
+    }
 }
